@@ -1,16 +1,18 @@
 # Java compiled files
 *.class
 
-# Maven build output
+# Maven
 target/
 
-# VS Code settings
+# VS Code
 .vscode/
 
 # Environment variables and secrets
 .env
 .env.*
 
-# OS files
+# macOS
 .DS_Store
+
+# Windows
 Thumbs.db
