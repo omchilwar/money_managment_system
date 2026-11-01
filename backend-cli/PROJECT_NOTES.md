@@ -904,3 +904,640 @@ successfully retrieves the four default categories from `finance_db`.
 **Next lesson:** Build the `Expense` model and `ExpenseDAO`, learning
 how to use `PreparedStatement` parameters and `executeUpdate()` to
 insert an expense.
+
+
+
+# Expense Model and ExpenseDAO – Project Notes
+
+## 1. Introduction
+
+In our Money Manager project, we created an Expense Model and ExpenseDAO to manage expenses using Java and MySQL.
+
+We implemented three operations:
+
+1. Add an expense (INSERT)
+2. Display all expenses (SELECT)
+3. Delete an expense (DELETE)
+
+---
+
+## 2. Expense Model
+
+**File location:**
+`src/main/java/com/moneymanager/model/Expense.java`
+
+### Purpose
+
+The Expense Model represents a single expense in our Java application.
+
+It stores the information of an expense in the form of an object.
+
+### Database Table: expenses
+
+| Column | Data Type | Description |
+|---|---|---|
+| id | INT | Unique expense ID |
+| amount | DECIMAL(10,2) | Expense amount |
+| category_id | INT | Category ID |
+| expense_date | DATE | Date of expense |
+| description | VARCHAR(255) | Expense description |
+
+### Expense.java Code
+
+```java
+package com.moneymanager.model;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Expense {
+
+    private int id;
+    private BigDecimal amount;
+    private int categoryId;
+    private LocalDate expenseDate;
+    private String description;
+
+    public Expense(int id, BigDecimal amount, int categoryId,
+                   LocalDate expenseDate, String description) {
+
+        this.id = id;
+        this.amount = amount;
+        this.categoryId = categoryId;
+        this.expenseDate = expenseDate;
+        this.description = description;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public int getCategoryId() {
+        return categoryId;
+    }
+
+    public LocalDate getExpenseDate() {
+        return expenseDate;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+```
+
+### Important Concepts
+
+**1. BigDecimal**
+
+- Used to store money values accurately.
+- Avoids common floating-point precision problems.
+- Preferred over `double` for financial calculations.
+
+Example:
+
+```java
+BigDecimal amount = new BigDecimal("250.00");
+```
+
+**2. LocalDate**
+
+- Used to represent dates.
+- Does not store time.
+
+Example:
+
+```java
+LocalDate date = LocalDate.now();
+```
+
+**3. Constructor**
+
+A constructor initializes an Expense object with its values.
+
+**4. Getters**
+
+Getter methods retrieve private variables from the Expense object.
+
+---
+
+## 3. ExpenseDAO
+
+**File location:**
+
+`src/main/java/com/moneymanager/dao/ExpenseDAO.java`
+
+### What is DAO?
+
+DAO stands for Data Access Object.
+
+It is responsible for communicating with the database and performing database operations.
+
+Our ExpenseDAO contains three methods:
+
+- `addExpense()`
+- `getAllExpenses()`
+- `deleteExpense()`
+
+---
+
+## 4. Adding an Expense – INSERT
+
+### Method
+
+```java
+public boolean addExpense(Expense expense)
+```
+
+### Purpose
+
+Inserts a new expense into the MySQL database.
+
+### Code
+
+```java
+public boolean addExpense(Expense expense) {
+
+    String sql = "INSERT INTO expenses " +
+                 "(amount, category_id, expense_date, description) " +
+                 "VALUES (?, ?, ?, ?)";
+
+    try (
+        Connection conn = DBconnection.getConnection();
+        PreparedStatement pstmt = conn.prepareStatement(sql)
+    ) {
+
+        pstmt.setBigDecimal(1, expense.getAmount());
+        pstmt.setInt(2, expense.getCategoryId());
+        pstmt.setDate(3, java.sql.Date.valueOf(expense.getExpenseDate()));
+        pstmt.setString(4, expense.getDescription());
+
+        int rows = pstmt.executeUpdate();
+
+        return rows > 0;
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+```
+
+### Important Concepts
+
+**1. PreparedStatement**
+
+PreparedStatement is used to execute parameterized SQL queries.
+
+It uses `?` as placeholders.
+
+Example:
+
+```sql
+INSERT INTO expenses
+(amount, category_id, expense_date, description)
+VALUES (?, ?, ?, ?);
+```
+
+**2. Setting placeholder values**
+
+| Method | Placeholder | Value |
+|---|---|---|
+| setBigDecimal() | 1 | Amount |
+| setInt() | 2 | Category ID |
+| setDate() | 3 | Expense date |
+| setString() | 4 | Description |
+
+Remember: Placeholder numbering starts from 1, not 0.
+
+**3. executeUpdate()**
+
+Used for:
+
+- INSERT
+- UPDATE
+- DELETE
+
+It returns the number of affected rows.
+
+Example:
+
+- 1 = One row inserted.
+- 0 = No rows affected.
+
+**4. Return value**
+
+```java
+return rows > 0;
+```
+
+Returns `true` if the insertion succeeds and `false` otherwise.
+
+---
+
+## 5. Displaying All Expenses – SELECT
+
+### Method
+
+```java
+public List<Expense> getAllExpenses()
+```
+
+### Purpose
+
+Retrieves all expenses from the MySQL database and converts each database row into an Expense object.
+
+### Code
+
+```java
+public List<Expense> getAllExpenses() {
+
+    List<Expense> expenses = new ArrayList<>();
+
+    String sql = "SELECT * FROM expenses";
+
+    try (
+        Connection conn = DBconnection.getConnection();
+        PreparedStatement pstmt = conn.prepareStatement(sql);
+        ResultSet rs = pstmt.executeQuery()
+    ) {
+
+        while (rs.next()) {
+
+            int id = rs.getInt("id");
+
+            BigDecimal amount =
+                rs.getBigDecimal("amount");
+
+            int categoryId =
+                rs.getInt("category_id");
+
+            LocalDate expenseDate =
+                rs.getDate("expense_date").toLocalDate();
+
+            String description =
+                rs.getString("description");
+
+            Expense expense = new Expense(
+                id, amount, categoryId, expenseDate, description
+            );
+
+            expenses.add(expense);
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return expenses;
+}
+```
+
+### Important Concepts
+
+**1. List<Expense>**
+
+Stores multiple Expense objects in a list.
+
+**2. ArrayList**
+
+```java
+List<Expense> expenses = new ArrayList<>();
+```
+
+Creates an empty list to store expenses.
+
+**3. ResultSet**
+
+ResultSet stores the rows returned by a SELECT query.
+
+**4. rs.next()**
+
+```java
+while (rs.next())
+```
+
+Moves the cursor to the next row.
+
+It returns `true` if another row exists and `false` when no more rows are available.
+
+**5. Reading database values**
+
+| Method | Purpose |
+|---|---|
+| getInt() | Reads an integer |
+| getBigDecimal() | Reads a decimal value |
+| getString() | Reads text |
+| getDate() | Reads a SQL date |
+
+**6. Converting SQL Date to LocalDate**
+
+```java
+rs.getDate("expense_date").toLocalDate();
+```
+
+Converts a SQL Date into Java's LocalDate.
+
+**7. Creating an Expense object**
+
+```java
+Expense expense = new Expense(
+    id, amount, categoryId, expenseDate, description
+);
+```
+
+Converts the database row into a Java object.
+
+**8. Adding to ArrayList**
+
+```java
+expenses.add(expense);
+```
+
+Adds the Expense object to the list.
+
+---
+
+## 6. Deleting an Expense – DELETE
+
+### Method
+
+```java
+public boolean deleteExpense(int id)
+```
+
+### Purpose
+
+Deletes an expense using its unique ID.
+
+### Code
+
+```java
+public boolean deleteExpense(int id) {
+
+    String sql = "DELETE FROM expenses WHERE id = ?";
+
+    try (
+        Connection conn = DBconnection.getConnection();
+        PreparedStatement pstmt = conn.prepareStatement(sql)
+    ) {
+
+        pstmt.setInt(1, id);
+
+        int rows = pstmt.executeUpdate();
+
+        return rows > 0;
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+```
+
+### Important Concepts
+
+**1. DELETE query**
+
+```sql
+DELETE FROM expenses WHERE id = ?;
+```
+
+Deletes only the record whose ID matches the given ID.
+
+**2. Setting ID**
+
+```java
+pstmt.setInt(1, id);
+```
+
+Replaces the question mark with the ID supplied by the user.
+
+**3. Checking affected rows**
+
+```java
+int rows = pstmt.executeUpdate();
+```
+
+- 1 = Expense deleted successfully.
+- 0 = Expense with that ID was not found.
+
+---
+
+## 7. Understanding AUTO_INCREMENT
+
+Our expenses table has:
+
+```sql
+id INT AUTO_INCREMENT PRIMARY KEY
+```
+
+### What does AUTO_INCREMENT mean?
+
+MySQL automatically generates a unique ID whenever a new expense is inserted.
+
+Example:
+
+| ID | Amount | Description |
+|---|---:|---|
+| 1 | 250 | Lunch |
+| 2 | 500 | Bus ticket |
+| 3 | 100 | Notebook |
+
+When we insert another expense, MySQL generates the next available AUTO_INCREMENT value.
+
+### Why do we still need the ID?
+
+Although MySQL generates the ID automatically, we need it to identify a particular record.
+
+For example:
+
+```java
+deleteExpense(2);
+```
+
+Deletes the expense with ID 2.
+
+### Important Difference
+
+| Operation | Does user provide ID? | Reason |
+|---|---|---|
+| Insert | No | MySQL generates ID |
+| Display | No | MySQL returns ID |
+| Delete | Yes | Identifies the expense |
+| Update | Yes | Identifies the expense |
+
+Remember:
+
+**AUTO_INCREMENT generates the ID, but the ID is still necessary to identify individual records.**
+
+---
+
+## 8. Important JDBC Concepts Revision
+
+| Concept | Meaning |
+|---|---|
+| Connection | Connects Java to MySQL |
+| DriverManager | Helps establish database connections |
+| PreparedStatement | Executes parameterized SQL queries |
+| ResultSet | Holds SELECT query results |
+| executeQuery() | Executes SELECT |
+| executeUpdate() | Executes INSERT, UPDATE, DELETE |
+| rs.next() | Moves to the next result row |
+| ArrayList | Stores multiple objects |
+| try-with-resources | Automatically closes database resources |
+| SQLException | Handles SQL-related errors |
+
+### Remember This
+
+- `executeQuery()` → SELECT
+- `executeUpdate()` → INSERT, UPDATE, DELETE
+
+---
+
+## 9. Common Mistake: Duplicate Expenses
+
+During testing, we noticed that every time Main.java ran, another expense was inserted.
+
+### Why did this happen?
+
+Because the following method was called every time:
+
+```java
+expenseDAO.addExpense(expense);
+```
+
+Every program execution inserted another database record.
+
+### Solution
+
+After testing insertion, temporarily comment out the insertion code when testing SELECT.
+
+```java
+// expenseDAO.addExpense(expense);
+```
+
+This prevents accidental duplicate records during retrieval testing.
+
+Remember: MySQL data remains stored even after the Java program stops.
+
+---
+
+## 10. Main.java Testing
+
+We used Scanner to accept input directly from the terminal instead of manually creating objects with fixed values.
+
+This allows users to:
+
+- Enter expense details.
+- Add expenses.
+- View all expenses.
+- Enter an expense ID to delete it.
+
+Scanner belongs to Java's `java.util` package.
+
+Example:
+
+```java
+import java.util.Scanner;
+
+Scanner sc = new Scanner(System.in);
+
+System.out.print("Enter amount: ");
+BigDecimal amount = sc.nextBigDecimal();
+```
+
+---
+
+## 11. Project Progress
+
+### Completed
+
+- [x] Maven project setup
+- [x] MySQL connection
+- [x] Category Model
+- [x] CategoryDAO
+- [x] Expense Model
+- [x] ExpenseDAO – addExpense()
+- [x] ExpenseDAO – getAllExpenses()
+- [x] ExpenseDAO – deleteExpense()
+- [x] Scanner-based terminal input
+
+### Next Topics
+
+- [ ] ExpenseDAO – updateExpense()
+- [ ] Display category names instead of category IDs
+- [ ] Allowance Model and DAO
+- [ ] Contacts Model and DAO
+- [ ] Ledger Entries Model and DAO
+- [ ] Ledger Payments Model and DAO
+- [ ] Main menu integration
+
+---
+
+## 12. Quick Revision Questions
+
+**Q1. What is DAO?**
+
+DAO stands for Data Access Object. It performs database operations.
+
+**Q2. Why do we use BigDecimal for money?**
+
+To perform accurate decimal calculations.
+
+**Q3. What is PreparedStatement?**
+
+It executes parameterized SQL queries using placeholders.
+
+**Q4. What does executeQuery() do?**
+
+Executes SELECT queries and returns a ResultSet.
+
+**Q5. What does executeUpdate() do?**
+
+Executes INSERT, UPDATE, and DELETE queries and returns the number of affected rows.
+
+**Q6. What does rs.next() do?**
+
+Moves the ResultSet cursor to the next row.
+
+**Q7. Why do we use ArrayList?**
+
+To store multiple Expense objects.
+
+**Q8. Why do we need an ID if it is AUTO_INCREMENT?**
+
+Because we need the ID to identify a particular expense when deleting or updating it.
+
+**Q9. Why are duplicates appearing when running Main.java repeatedly?**
+
+Because the INSERT method executes every time the program runs.
+
+**Q10. What is the difference between Model and DAO?**
+
+- Model represents the data.
+- DAO performs database operations.
+
+---
+
+## Final Revision Summary
+
+Our Expense Model stores expense information as Java objects.
+
+Our ExpenseDAO communicates with MySQL and performs three operations:
+
+1. `addExpense()` – inserts an expense.
+2. `getAllExpenses()` – retrieves all expenses.
+3. `deleteExpense()` – deletes an expense using its ID.
+
+**Most important concept:**
+
+Model = Data representation
+
+DAO = Database operations
+
+JDBC = Communication between Java and MySQL
