@@ -96,6 +96,32 @@ public class ExpenseDAO {
     
     }
 
+    //  updating the expenses 
+
+    public boolean updateExpense(Expense expense){
+        String sql = "UPDATE expenses SET amount = ?," + "category_id= ?, expense_date= ?,"+"description = ? WHERE id = ?";
+
+        try(
+            Connection conn =DBconnection.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+        ){
+            pstmt.setBigDecimal(1, expense.getAmount());
+            pstmt.setInt(2, expense.getCategoryId());
+            pstmt.setDate(3, java.sql.Date.valueOf(expense.getExpenseDate()));
+            pstmt.setString(4, expense.getDescription());
+            pstmt.setInt(5, expense.getId()
+        );
+
+        int rows=pstmt.executeUpdate();
+        return rows>0;
+
+        }catch(SQLException e){
+            e.printStackTrace();
+            return false;
+        }
+
+    }
+
 
 
 }

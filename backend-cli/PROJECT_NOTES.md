@@ -1541,3 +1541,318 @@ Model = Data representation
 DAO = Database operations
 
 JDBC = Communication between Java and MySQL
+
+
+# Allowance Module – Money Manager Project
+
+## 1. Introduction
+
+The Allowance module manages the money received by the user.
+
+It supports four operations:
+
+1. Add an allowance.
+2. Retrieve all allowances.
+3. Update an existing allowance.
+4. Delete an allowance.
+
+This module uses Java, JDBC, and MySQL.
+
+---
+
+## 2. Database Table
+
+Table name: `allowance`
+
+| Column | Data Type | Description |
+|---|---|---|
+| id | INT | Primary key, AUTO_INCREMENT |
+| amount | DECIMAL(10,2) | Allowance amount |
+| month_year | VARCHAR(7) | Month in YYYY-MM format |
+| received_date | DATE | Date allowance was received |
+
+Example:
+
+| id | amount | month_year | received_date |
+|---|---:|---|---|
+| 1 | 4000.00 | 2026-11 | 2026-11-03 |
+| 2 | 5000.00 | 2026-12 | 2026-12-01 |
+
+---
+
+## 3. Allowance Model Class
+
+File: `model/Allowance.java`
+
+The Model class represents one allowance record.
+
+```java
+package com.moneymanager.model;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Allowance {
+
+    private int id;
+    private BigDecimal amount;
+    private String monthYear;
+    private LocalDate receivedDate;
+
+    public Allowance(int id, BigDecimal amount,
+                     String monthYear, LocalDate receivedDate) {
+
+        this.id = id;
+        this.amount = amount;
+        this.monthYear = monthYear;
+        this.receivedDate = receivedDate;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public String getMonthYear() {
+        return monthYear;
+    }
+
+    public LocalDate getReceivedDate() {
+        return receivedDate;
+    }
+}
+```
+
+### Why these data types?
+
+- `int`: stores the allowance ID.
+- `BigDecimal`: stores money accurately.
+- `String`: stores the month in YYYY-MM format.
+- `LocalDate`: stores the received date.
+
+---
+
+## 4. AllowanceDAO Class
+
+File: `dao/AllowanceDAO.java`
+
+DAO stands for Data Access Object.
+
+It contains methods that communicate with the MySQL database.
+
+### A. addAllowance()
+
+Purpose: Insert a new allowance record.
+
+SQL query:
+
+```sql
+INSERT INTO allowance
+(amount, month_year, received_date)
+VALUES (?, ?, ?);
+```
+
+Important JDBC methods:
+
+- `prepareStatement()`: prepares the SQL query.
+- `setBigDecimal()`: sets the allowance amount.
+- `setString()`: sets the month.
+- `setDate()`: sets the received date.
+- `executeUpdate()`: executes the INSERT query.
+
+The ID is not inserted manually because MySQL generates it using AUTO_INCREMENT.
+
+### B. getAllAllowances()
+
+Purpose: Retrieve all allowance records.
+
+SQL query:
+
+```sql
+SELECT * FROM allowance;
+```
+
+Important JDBC concepts:
+
+- `executeQuery()`: executes SELECT queries.
+- `ResultSet`: stores the returned database records.
+- `rs.next()`: moves to the next record.
+- `getInt()`, `getBigDecimal()`, `getString()`, `getDate()`: retrieve column values.
+- `ArrayList`: stores the retrieved Allowance objects.
+
+Each database record is converted into an `Allowance` object and added to a list.
+
+### C. updateAllowance()
+
+Purpose: Update an existing allowance.
+
+SQL query:
+
+```sql
+UPDATE allowance
+SET amount = ?,
+    month_year = ?,
+    received_date = ?
+WHERE id = ?;
+```
+
+Important concepts:
+
+- `UPDATE`: modifies an existing record.
+- `SET`: specifies the columns to change.
+- `WHERE`: identifies the record to update.
+- `executeUpdate()`: executes the UPDATE query.
+
+The ID identifies which allowance record needs to be updated.
+
+### D. deleteAllowance()
+
+Purpose: Delete an allowance using its ID.
+
+SQL query:
+
+```sql
+DELETE FROM allowance WHERE id = ?;
+```
+
+Important concepts:
+
+- `DELETE FROM`: removes a database record.
+- `WHERE id = ?`: identifies the record to delete.
+- `setInt()`: supplies the ID.
+- `executeUpdate()`: executes the DELETE query.
+
+**Important:** Never forget the WHERE condition when deleting a specific record.
+
+---
+
+## 5. Understanding executeQuery() and executeUpdate()
+
+| Method | Used For |
+|---|---|
+| executeQuery() | SELECT |
+| executeUpdate() | INSERT |
+| executeUpdate() | UPDATE |
+| executeUpdate() | DELETE |
+
+`executeQuery()` returns a ResultSet.
+
+`executeUpdate()` returns an integer representing the number of affected rows.
+
+---
+
+## 6. Why do we use boolean return values?
+
+Our DAO methods return `boolean` for insert, update, and delete operations.
+
+Example:
+
+```java
+int rows = pstmt.executeUpdate();
+
+return rows > 0;
+```
+
+If at least one row is affected, the method returns `true`.
+
+Otherwise, it returns `false`.
+
+This allows Main.java to display a success or failure message.
+
+---
+
+## 7. Testing Allowance in Main.java
+
+We use Scanner to accept input from the user.
+
+Example for inserting an allowance:
+
+```java
+AllowanceDAO allowanceDAO = new AllowanceDAO();
+
+System.out.print("Enter allowance amount: ");
+BigDecimal amount = sc.nextBigDecimal();
+sc.nextLine();
+
+System.out.print("Enter month (YYYY-MM): ");
+String monthYear = sc.nextLine();
+
+System.out.print("Enter received date (YYYY-MM-DD): ");
+LocalDate receivedDate = LocalDate.parse(sc.nextLine());
+
+Allowance allowance = new Allowance(
+    0, amount, monthYear, receivedDate
+);
+
+boolean result = allowanceDAO.addAllowance(allowance);
+
+if (result) {
+    System.out.println("Allowance added successfully!");
+} else {
+    System.out.println("Failed to add allowance!");
+}
+```
+
+The same DAO object can be used to retrieve, update, and delete allowances.
+
+---
+
+## 8. Important JDBC Concepts Learned
+
+1. **Connection:** Establishes a connection between Java and MySQL.
+2. **PreparedStatement:** Executes SQL queries using placeholders.
+3. **ResultSet:** Reads records returned by SELECT.
+4. **executeQuery():** Retrieves records.
+5. **executeUpdate():** Inserts, updates, or deletes records.
+6. **try-with-resources:** Automatically closes database resources.
+7. **SQLException:** Handles database-related errors.
+8. **AUTO_INCREMENT:** Automatically generates primary key IDs.
+9. **DAO Pattern:** Separates database operations from the Main class.
+10. **Model Class:** Represents database records as Java objects.
+
+---
+
+## 9. Common Mistakes and Solutions
+
+| Mistake | Solution |
+|---|---|
+| Writing INSEERT instead of INSERT | Check SQL spelling |
+| Writing recived_date instead of received_date | Match database column names exactly |
+| Forgetting WHERE in UPDATE | Always identify the record using its ID |
+| Forgetting WHERE in DELETE | Always identify the record using its ID |
+| Using executeQuery() for INSERT | Use executeUpdate() |
+| Using next() for a full description | Use nextLine() |
+| Inserting the ID manually | Let AUTO_INCREMENT generate it |
+
+---
+
+## 10. Allowance Module Completion
+
+| Operation | Method | Status |
+|---|---|---|
+| Create | addAllowance() | Completed |
+| Read | getAllAllowances() | Completed |
+| Update | updateAllowance() | Completed |
+| Delete | deleteAllowance() | Completed |
+
+**Result:** The Allowance module now supports complete CRUD operations using Java, JDBC, and MySQL.
+
+---
+
+## 11. Next Project Step
+
+After completing the Allowance module, we can move to the Contacts module.
+
+The Contacts module will manage people with whom the user has lent or borrowed money.
+
+Planned operations:
+
+1. Add a contact.
+2. Retrieve all contacts.
+3. Update contact details.
+4. Delete or deactivate a contact.
+
+We will continue using the same Model + DAO approach.
